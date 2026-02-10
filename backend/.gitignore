@@ -16,6 +16,9 @@
 !/log/.keep
 !/tmp/.keep
 
+# cache
+/tmp/cache
+
 # Ignore pidfiles, but keep the directory.
 /tmp/pids/*
 !/tmp/pids/
@@ -33,3 +36,6 @@
 
 # lsp vim/nvim
 .ruby-lsp
+
+# exclude
+!/.env.template
