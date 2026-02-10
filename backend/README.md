@@ -1,24 +1,28 @@
-# README
+# backend
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+<!-- I got no prior experience with Ruby -->
+Backend for real-time chat with Ruby on Rails.
 
-Things you may want to cover:
+<br>
 
-* Ruby version
+---
 
-* System dependencies
+# Importans
 
-* Configuration
+- check `.env` file in this project dir:
+    - if doesn't exists, you can use `.env.template` and rename it as `.env`
 
-* Database creation
+<br>
 
-* Database initialization
+---
 
-* How to run the test suite
+## Reserved
 
-* Services (job queues, cache servers, search engines, etc.)
+`ports:`
+- 10000
 
-* Deployment instructions
+<br>
 
-* ...
+---
+
+###### end of readme
