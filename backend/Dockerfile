@@ -40,6 +40,8 @@ RUN bundle install && \
 # Copy application code
 COPY . .
 COPY .env.production .env
+COPY configs/master.key configs/master.key
+RUN chmod 600 config/master.key
 
 # Precompile bootsnap for faster boot
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
