@@ -43,7 +43,7 @@ COPY .env.production .env
 
 # Precompile bootsnap for faster boot
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
-RUN exec rails secret
+RUN ./bin/rails secret
 
 # Final stage
 FROM base
