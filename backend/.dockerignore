@@ -9,6 +9,9 @@
 
 # Ignore all environment files.
 /.env*
+!/.env.dev
+!/.env.template
+!/.env.production
 
 # Ignore all default key files.
 /config/master.key
