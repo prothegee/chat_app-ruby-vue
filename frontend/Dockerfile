@@ -19,5 +19,5 @@ FROM node:20-alpine
 WORKDIR /app
 COPY --from=builder /app/dist ./dist
 RUN npm install -g http-server
-EXPOSE 10001
-CMD ["http-server", "dist", "-p", "10001", "-g", "--cors"]
+EXPOSE 80
+CMD ["http-server", "dist", "-p", "80", "-g", "--cors"]
