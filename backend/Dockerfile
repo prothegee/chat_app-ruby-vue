@@ -21,7 +21,7 @@ ENV RAILS_ENV="production" \
     BUNDLE_WITHOUT="development" \
     LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 
-ENV PORT=80
+# ENV PORT=80
 
 # Throw-away build stage to reduce final image size
 FROM base AS build
@@ -39,6 +39,7 @@ RUN bundle install && \
 
 # Copy application code
 COPY . .
+COPY .env.production .env
 
 # Precompile bootsnap for faster boot
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
