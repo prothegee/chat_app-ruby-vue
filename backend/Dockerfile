@@ -1,5 +1,5 @@
-# === Build Stage ===
-FROM ruby:3.2-slim AS builder
+ARG RUBY_VERSION=3.4.8
+FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
 
 # Install dependencies sistem
 RUN apt-get update -qq && \
