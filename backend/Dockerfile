@@ -14,7 +14,7 @@ ENV RAILS_ENV="production" \
     BUNDLE_WITHOUT="development" \
     LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 
-ENV PORT=80
+ENV PORT=10000
 
 FROM base AS build
 
@@ -42,5 +42,5 @@ USER 1000:1000
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
-EXPOSE 80
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0", "-p", "80"]
+EXPOSE 10000
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]

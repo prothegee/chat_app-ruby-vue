@@ -25,4 +25,13 @@ A demo application for real-time chat app; with Ruby on Rails and Vue.
 
 ---
 
+## AWS Services
+
+- Backend : https://ba-a7a57a0384ce4cca90803a8eace8636e.ecs.ap-southeast-1.on.aws/
+- Frontend: https://fr-04c921bd60d340309d08d9cae11c26d7.ecs.ap-southeast-1.on.aws/
+
+<br>
+
+---
+
 ###### end of readme
