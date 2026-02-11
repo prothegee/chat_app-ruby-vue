@@ -1,70 +1,52 @@
-# syntax=docker/dockerfile:1
-ARG RUBY_VERSION=3.4.8
-FROM docker.io/library/ruby:$RUBY_VERSION-slim AS base
+# === Build Stage ===
+FROM ruby:3.2-slim AS builder
 
-WORKDIR /rails
-
-# Install base packages
+# Install dependencies sistem
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libjemalloc2 libvips sqlite3 && \
-    ln -s /usr/lib/$(uname -m)-linux-gnu/libjemalloc.so.2 /usr/local/lib/libjemalloc.so && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+    apt-get install -y --no-install-recommends \
+      build-essential \
+      libpq-dev \
+      libvips-dev \
+      nodejs \
+      npm \
+      postgresql-client \
+      git \
+      && rm -rf /var/lib/apt/lists/*
 
-ENV RAILS_ENV="production" \
-    BUNDLE_DEPLOYMENT="1" \
-    BUNDLE_PATH="/usr/local/bundle" \
-    BUNDLE_WITHOUT="development" \
-    LD_PRELOAD="/usr/local/lib/libjemalloc.so"
+# Set working directory
+WORKDIR /app
 
-ENV PORT=80
-
-FROM base AS build
-
-# Install build dependencies
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
-
-# Install gems
+# Install bundler dan set up gems
 COPY Gemfile Gemfile.lock ./
-RUN bundle install && \
-    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
-    bundle exec bootsnap precompile -j 1 --gemfile
+RUN bundle config set --local without 'development test' && \
+    bundle install
+RUN ./bin/rails secret
 
-# Copy application code
-COPY . .
+# === Runtime Stage ===
+FROM ruby:3.2-slim
 
-# Precompile bootsnap
-RUN bundle exec bootsnap precompile -j 1 app/ lib/
+# Install runtime dependencies only
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+      libpq-dev \
+      libvips-dev \
+      nodejs \
+      postgresql-client \
+      && rm -rf /var/lib/apt/lists/*
 
-# GENERATE CREDENTIALS OTOMATIS
-RUN RAILS_MASTER_KEY=$(openssl rand -hex 16) && \
-    echo $RAILS_MASTER_KEY > config/master.key && \
-    chmod 600 config/master.key && \
-    SECRET_KEY_BASE=$(openssl rand -hex 64) && \
-    echo "production:" > config/credentials.yml.enc && \
-    echo "  secret_key_base: $SECRET_KEY_BASE" >> config/credentials.yml.enc && \
-    # Save key untuk digunakan nanti
-    echo $RAILS_MASTER_KEY > /tmp/RAILS_MASTER_KEY.txt
+# Buat user non-root
+RUN useradd --create-home --shell /bin/bash rails
+USER rails
+WORKDIR /home/rails/app
 
-FROM base
+# Copy gems dari build stage
+COPY --from=builder /usr/local/bundle /usr/local/bundle
 
-RUN groupadd --system --gid 1000 rails && \
-    useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
-USER 1000:1000
+# Copy aplikasi
+COPY --chown=rails:rails . .
 
-# Copy gems and app
-COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
-COPY --chown=rails:rails --from=build /rails /rails
-
-# Copy master key dari build stage
-COPY --from=build --chown=rails:rails /tmp/RAILS_MASTER_KEY.txt /rails/config/master.key
-
-# Set environment variable dengan format yang benar
-ENV RAILS_MASTER_KEY=placeholder
-RUN export RAILS_MASTER_KEY=$(cat /rails/config/master.key)
-
-# ENTRYPOINT ["/rails/bin/docker-entrypoint"]
-
+# Expose port (default Rails)
 EXPOSE 80
-CMD ["./bin/rails", "server", "-b", "0.0.0.0"]
+
+# Start server
+CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
