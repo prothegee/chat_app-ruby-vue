@@ -62,4 +62,4 @@ ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
 # Start via Thruster; exposes port 80
 EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]   
+CMD ["./bin/rails", "server"]   
