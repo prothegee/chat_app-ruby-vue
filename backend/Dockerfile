@@ -27,6 +27,8 @@ ENV RAILS_ENV="production" \
     BUNDLE_WITHOUT="development" \
     LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 
+ENV PORT=10000
+
 # Throw-away build stage to reduce size of final image
 FROM base AS build
 
@@ -70,5 +72,5 @@ COPY --chown=rails:rails --from=build /rails /rails
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
 # Start server via Thruster by default, this can be overwritten at runtime
-EXPOSE 80
+EXPOSE 10000
 CMD ["./bin/thrust", "./bin/rails", "server"]
