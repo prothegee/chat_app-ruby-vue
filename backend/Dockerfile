@@ -37,18 +37,15 @@ COPY . .
 # Precompile bootsnap
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
-# 🔥 GENERATE CREDENTIALS OTOMATIS TANPA NANO 🔥
+# GENERATE CREDENTIALS OTOMATIS
 RUN RAILS_MASTER_KEY=$(openssl rand -hex 16) && \
     echo $RAILS_MASTER_KEY > config/master.key && \
     chmod 600 config/master.key && \
     SECRET_KEY_BASE=$(openssl rand -hex 64) && \
     echo "production:" > config/credentials.yml.enc && \
     echo "  secret_key_base: $SECRET_KEY_BASE" >> config/credentials.yml.enc && \
-    echo "  rails_master_key: $RAILS_MASTER_KEY" >> config/credentials.yml.enc && \
-    # Encrypt credentials
-    rails credentials:encrypt RAILS_MASTER_KEY=$RAILS_MASTER_KEY && \
     # Save key untuk digunakan nanti
-    echo $RAILS_MASTER_KEY > /tmp/RAILS_MASTER_KEY
+    echo $RAILS_MASTER_KEY > /tmp/RAILS_MASTER_KEY.txt
 
 FROM base
 
@@ -60,11 +57,14 @@ USER 1000:1000
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
-# 🔥 COPY MASTER KEY KE ENVIRONMENT 🔥
-RUN echo "export RAILS_MASTER_KEY=$(cat /tmp/RAILS_MASTER_KEY)" >> /home/rails/.profile
-ENV RAILS_MASTER_KEY=$(cat /tmp/RAILS_MASTER_KEY)
+# Copy master key dari build stage
+COPY --from=build --chown=rails:rails /tmp/RAILS_MASTER_KEY.txt /rails/config/master.key
 
-ENTRYPOINT ["/rails/bin/docker-entrypoint"]
+# Set environment variable dengan format yang benar
+ENV RAILS_MASTER_KEY=placeholder
+RUN export RAILS_MASTER_KEY=$(cat /rails/config/master.key)
+
+# ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
 EXPOSE 80
 CMD ["./bin/rails", "server", "-b", "0.0.0.0"]
