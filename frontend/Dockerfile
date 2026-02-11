@@ -11,4 +11,4 @@ RUN npm run build
 COPY --from=builder /app/dist ./dist
 RUN npm install -g http-server
 EXPOSE 10001
-CMD ["http-server", "dist", "-p", "80", "-g", "--cors"]
+CMD ["http-server", "dist", "-p", "10001", "-g", "--cors"]
