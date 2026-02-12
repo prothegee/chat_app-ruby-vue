@@ -76,12 +76,31 @@ Rails.application.configure do
   # Only use :id for inspections in production.
   config.active_record.attributes_for_inspect = [ :id ]
 
-  # Enable DNS rebinding protection and other `Host` header attacks.
-  # config.hosts = [
-  #   "example.com",     # Allow requests from example.com
-  #   /.*\.example\.com/ # Allow requests from subdomains like `www.example.com`
-  # ]
-  #
+  config.action_cable.allowed_request_origins = [
+    'https://sbxgztwjri.ap-southeast-1.awsapprunner.com',
+    'http://sbxgztwjri.ap-southeast-1.awsapprunner.com',
+    'https://vugt2fw2ex.ap-southeast-1.awsapprunner.com',
+    'http://vugt2fw2ex.ap-southeast-1.awsapprunner.com',
+    /https?:\/\/.*\.awsapprunner\.com/,
+    /http?:\/\/.*\.awsapprunner\.com/,
+    /http:\/\/localhost:\d+/
+  ]
+
+  config.action_cable.disable_request_forgery_protection = true
+
+  config.hosts.clear
+  config.hosts << /.*\.awsapprunner\.com/
+  config.hosts << 'localhost'
+
+  config.force_ssl = true
+  config.ssl_options = {
+    redirect: {
+      exclude: ->(request) {
+        request.path == '/cable' || request.path.start_with?('/cable')
+      }
+    }
+  }
+
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end

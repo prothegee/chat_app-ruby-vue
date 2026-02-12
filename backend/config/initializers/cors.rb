@@ -9,10 +9,10 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
   allow do
     # important:
     # - well yes, this is just for now
-    origins "*"
-
-    resource "/api/v1/*",
+    origins "*", /.*\.awsapprunner\.com/, /localhost:\d+/
+    resource "*",
       headers: :any,
-      methods: [:get, :post, :put, :patch, :delete, :options, :head]
+      methods: [:get, :post, :put, :patch, :delete, :options, :head],
+      credentials: true
   end
 end
