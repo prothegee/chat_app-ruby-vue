@@ -2,6 +2,9 @@
 
 A demo application for real-time chat app; with Ruby on Rails and Vue.
 
+url test:
+https://vugt2fw2ex.ap-southeast-1.awsapprunner.com
+
 <br>
 
 ---
@@ -15,20 +18,6 @@ A demo application for real-time chat app; with Ruby on Rails and Vue.
 
 - `frontend`:
     - using Vue3; [read more](./frontend/README.md)
-
-    ---
-
-- `server`:
-    - [for more info](./server/README.md)
-
-<br>
-
----
-
-## AWS Services
-
-- Backend : https://ba-a7a57a0384ce4cca90803a8eace8636e.ecs.ap-southeast-1.on.aws/
-- Frontend: https://fr-04c921bd60d340309d08d9cae11c26d7.ecs.ap-southeast-1.on.aws/
 
 <br>
 

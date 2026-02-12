@@ -12,6 +12,9 @@ Backend for real-time chat with Ruby on Rails.
 - check `.env` file in this project dir:
     - if doesn't exists, you can use `.env.template` and rename it as `.env`
 
+- unit tests integration:
+    - n/a
+
 <br>
 
 ---

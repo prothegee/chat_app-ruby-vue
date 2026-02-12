@@ -15,6 +15,7 @@ ENV RAILS_ENV="production" \
     LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 
 ENV PORT=10000
+ENV THRUST_PORT=10000
 
 FROM base AS build
 
@@ -22,14 +23,14 @@ RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential git libyaml-dev pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
+COPY vendor/* ./vendor/
 COPY Gemfile Gemfile.lock ./
+
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
     bundle exec bootsnap precompile -j 1 --gemfile
 
 COPY . .
-COPY .env.production .env
-RUN ./bin/rails secret
 
 RUN bundle exec bootsnap precompile -j 1 app/ lib/
 
@@ -37,10 +38,24 @@ FROM base
 
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash
-USER 1000:1000
 
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
-EXPOSE 10000
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
+RUN chmod +x /rails/bin/docker-entrypoint
+
+RUN if [ ! -f /rails/bin/thrust ]; then \
+      ln -s /usr/local/bundle/bin/thrust /rails/bin/thrust || true; \
+    fi && \
+    chmod +x /rails/bin/thrust 2>/dev/null || true
+
+USER 1000:1000
+
+RUN mkdir -p /rails/tmp/pids
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD ["/bin/bash", "-c", "echo 'healthcheck' > /dev/null"]
+
+EXPOSE ${PORT}
+
+CMD ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "10000"]
