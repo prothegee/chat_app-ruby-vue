@@ -16,6 +16,14 @@ Read [README.legacy.md](./README.legacy.md) for init template.
 - unit tests integration:
     - n/a
 
+- to run dev:
+    - run this on the terminal:
+        ```
+        npm i;
+        npm run dev;
+        ```
+    - or build using Dockerfile and run from there
+
 <br>
 
 ---
