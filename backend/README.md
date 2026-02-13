@@ -15,6 +15,16 @@ Backend for real-time chat with Ruby on Rails.
 - unit tests integration:
     - n/a
 
+- to run dev:
+    - run this on the terminal:
+        ```
+        sh ./init.sh;
+        bundle install;
+        ```
+    - then:
+        `./bin/rails s;`
+    - or build using Dockerfile and run from there
+
 <br>
 
 ---
