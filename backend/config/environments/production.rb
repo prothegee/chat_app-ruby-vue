@@ -81,7 +81,8 @@ Rails.application.configure do
     /http?:\/\/.*\.awsapprunner\.com/,
     /https?:\/\/.*\.elasticbeanstalk\.com/,
     /http?:\/\/.*\.elasticbeanstalk\.com/,
-    # elasticbeanstalk.com
+    /https?:\/\/.*\.prothegee\.com/,
+    /http?:\/\/.*\.prothegee\.com/,
     /http:\/\/localhost:\d+/
   ]
 
@@ -90,6 +91,7 @@ Rails.application.configure do
   config.hosts.clear
   config.hosts << /.*\.awsapprunner\.com/
   config.hosts << /.*\.elasticbeanstalk\.com/
+  config.hosts << /.*\.prothegee\.com/
   config.hosts << "localhost"
 
   config.force_ssl = true
