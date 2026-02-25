@@ -48,6 +48,9 @@ export*.h
 export*.hh
 export*.hpp
 
+/backend-chat_app-ruby-vue.*
+/frontend-chat_app-ruby-vue.*
+
 ##
 ## file: exclude
 ##
