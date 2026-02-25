@@ -10,7 +10,7 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
     # important:
     # - well yes, this is just for now
     origins "*"
-    origins "*", /.*\.awsapprunner\.com/, /localhost:\d+/
+    origins "*", /.*\.awsapprunner\.com/, /.*\.prothegee\.com/, /localhost:\d+/
     resource "/*",
       headers: :any,
       methods: [:get, :post, :put, :patch, :delete, :options, :head]

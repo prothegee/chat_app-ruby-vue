@@ -12,6 +12,7 @@ ENV RAILS_ENV="production" \
     BUNDLE_DEPLOYMENT="1" \
     BUNDLE_PATH="/usr/local/bundle" \
     BUNDLE_WITHOUT="development" \
+    SECRET_KEY_BASE=a805b73f34efb8b5eb75986543e710f67d3b43b62e403bf43fbe07c127c5d59bcad9cfd5f953724770130b6d93d79845bd8950a18fd005b7f35619f497fabf1b \
     LD_PRELOAD="/usr/local/lib/libjemalloc.so"
 
 ENV PORT=10000
@@ -44,7 +45,8 @@ RUN groupadd --system --gid 1000 rails && \
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
-RUN chmod +x /rails/bin/docker-entrypoint
+RUN sh ./init.sh
+#RUN chmod +x /rails/bin/docker-entrypoint
 
 RUN if [ ! -f /rails/bin/thrust ]; then \
       ln -s /usr/local/bundle/bin/thrust /rails/bin/thrust || true; \

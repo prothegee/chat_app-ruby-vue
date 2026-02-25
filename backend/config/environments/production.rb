@@ -94,14 +94,14 @@ Rails.application.configure do
   config.hosts << /.*\.prothegee\.com/
   config.hosts << "localhost"
 
-  config.force_ssl = true
-  config.ssl_options = {
-    redirect: {
-      exclude: ->(request) {
-        request.path == "/cable" || request.path.start_with?("/cable")
-      }
-    }
-  }
+  # config.force_ssl = true
+  # config.ssl_options = {
+  #   redirect: {
+  #     exclude: ->(request) {
+  #       request.path == "/cable" || request.path.start_with?("/cable")
+  #     }
+  #   }
+  # }
 
   # Skip DNS rebinding protection for the default health check endpoint.
   # config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
