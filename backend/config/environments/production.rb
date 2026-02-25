@@ -77,12 +77,12 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   config.action_cable.allowed_request_origins = [
-    'https://sbxgztwjri.ap-southeast-1.awsapprunner.com',
-    'http://sbxgztwjri.ap-southeast-1.awsapprunner.com',
-    'https://vugt2fw2ex.ap-southeast-1.awsapprunner.com',
-    'http://vugt2fw2ex.ap-southeast-1.awsapprunner.com',
     /https?:\/\/.*\.awsapprunner\.com/,
     /http?:\/\/.*\.awsapprunner\.com/,
+    /https?:\/\/.*\.elasticbeanstalk\.com/,
+    /http?:\/\/.*\.elasticbeanstalk\.com/,
+    /https?:\/\/.*\.prothegee\.com/,
+    /http?:\/\/.*\.prothegee\.com/,
     /http:\/\/localhost:\d+/
   ]
 
@@ -90,13 +90,15 @@ Rails.application.configure do
 
   config.hosts.clear
   config.hosts << /.*\.awsapprunner\.com/
-  config.hosts << 'localhost'
+  config.hosts << /.*\.elasticbeanstalk\.com/
+  config.hosts << /.*\.prothegee\.com/
+  config.hosts << "localhost"
 
   config.force_ssl = true
   config.ssl_options = {
     redirect: {
       exclude: ->(request) {
-        request.path == '/cable' || request.path.start_with?('/cable')
+        request.path == "/cable" || request.path.start_with?("/cable")
       }
     }
   }
