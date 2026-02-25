@@ -1,25 +1,25 @@
-<script setup>
-  import { ref, onMounted, onUnmounted, watch, computed } from 'vue'
+<script setup lang="ts">
+  import { ref, onMounted, onUnmounted, watch, computed, type Ref } from 'vue'
 
-  const rooms = ref([])
+  const rooms = ref<string[]>([])
   const newRoomName = ref('')
   const selectedRoom = ref('')
   const currentRoom = ref('')
-  const messages = ref([])
+  const messages = ref<Array<{ user: string; text: string; timestamp: string | number }>>([])
   const newMessage = ref('')
   const username = ref('')
   const error = ref('')
-  const ws = ref(null)
+  const ws: Ref<WebSocket|null> = ref(null)
   const isJoined = ref(false)
 
   const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:10000'
   const WS_BASE = import.meta.env.VITE_WS_BASE || 'ws://localhost:10000/cable'
 
-  let roomRefreshInterval = null
+  let roomRefreshInterval: number|null = null
 
   onMounted(() => {
     fetchRooms()
-    roomRefreshInterval = setInterval(fetchRooms, 1000)
+    roomRefreshInterval = window.setInterval(fetchRooms, 1000)
   })
 
   onUnmounted(() => {
@@ -38,12 +38,26 @@
     }
   })
 
+  watch(error, (newError) => {
+    if (newError) {
+      const timer = setTimeout(() => {
+        error.value = ''
+      }, 5000)
+
+      onUnmounted(() => clearTimeout(timer))
+    }
+  })
+
   async function fetchRooms() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/chat`)
       rooms.value = await res.json()
-    } catch (e) {
+    } catch (err: unknown) {
       error.value = 'Failed to load rooms'
+
+      if (err instanceof Error) {
+        console.error(err.message)
+      }
     }
   }
 
@@ -62,8 +76,11 @@
         const err = await res.json()
         error.value = err.error || 'Failed to create room'
       }
-    } catch (e) {
+    } catch (err: unknown) {
       error.value = 'Network error'
+      if (err instanceof Error) {
+        console.error(err.message)
+      }
     }
   }
 
@@ -88,19 +105,22 @@
       const res = await fetch(`${API_BASE}/api/v1/chat/${currentRoom.value}/messages`)
       const data = await res.json()
       messages.value = Array.isArray(data) ? data.filter(isValidMessage) : []
-    } catch (e) {
+    } catch (err: unknown) {
       error.value = 'Failed to load messages'
       messages.value = []
+      if (err instanceof Error) {
+        console.error(err.message)
+      }
     }
   }
 
-  function connectWebSocket(roomName) {
+  function connectWebSocket(roomName: string) {
     disconnectWebSocket()
 
     ws.value = new WebSocket(WS_BASE)
 
     ws.value.onopen = () => {
-      ws.value.send(JSON.stringify({
+      ws.value?.send(JSON.stringify({
         command: 'subscribe',
         identifier: JSON.stringify({ channel: 'ChatChannel', room: roomName })
       }))
@@ -114,13 +134,16 @@
           messages.value.push(data.message)
           scrollToBottom()
         }
-      } catch (e) {
+      } catch (e: unknown) {
         console.error('Error parsing WebSocket message:', e)
       }
     }
 
     ws.value.onerror = (err) => {
       error.value = 'WebSocket connection error'
+      if (err instanceof Error) {
+        console.error(err.message)
+      }
     }
 
     ws.value.onclose = () => {
@@ -161,17 +184,22 @@
     }, 50)
   }
 
-  function isValidMessage(msg) {
-    return msg &&
-           typeof msg === 'object' &&
-           msg.user !== undefined &&
-           msg.text !== undefined &&
-           msg.timestamp !== undefined
+  function isValidMessage(msg: unknown): msg is { user: string; text: string; timestamp: string | number } {
+    return (
+      msg !== null &&
+      typeof msg === 'object' &&
+      'user' in msg &&
+      'text' in msg &&
+      'timestamp' in msg &&
+      typeof (msg as { user: unknown }).user === 'string' &&
+      typeof (msg as { text: unknown }).text === 'string' &&
+      (msg as { timestamp: unknown }).timestamp !== undefined
+    )
   }
 
-  const isOwnMessage = computed(() => (msg) => msg?.user === username.value)
+  const isOwnMessage = computed(() => (msg: { user: string }) => msg?.user === username.value)
 
-  function formatTimestamp(ts) {
+  function formatTimestamp(ts: string|number|undefined) {
     if (!ts) return '—'
     const d = new Date(ts)
     return isNaN(d.getTime())
@@ -251,7 +279,9 @@
       </div>
     </div>
 
-    <p v-if="error" class="error">{{ error }}</p>
+    <Transition name="fade">
+      <p v-if="error" key="error" class="error">{{ error }}</p>
+    </Transition>
   </div>
 </template>
 
@@ -423,5 +453,22 @@
 .error {
   color: red;
   margin-top: 10px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+
+.fade-enter-to,
+.fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>
