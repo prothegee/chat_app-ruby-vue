@@ -120,34 +120,43 @@
     ws.value = new WebSocket(WS_BASE)
 
     ws.value.onopen = () => {
-      ws.value?.send(JSON.stringify({
+      console.log('WebSocket connected')
+
+      // Kirim subscribe command - INI PENTING!
+      const subscribeMsg = {
         command: 'subscribe',
-        identifier: JSON.stringify({ channel: 'ChatChannel', room: roomName })
-      }))
+        identifier: JSON.stringify({
+          channel: 'ChatChannel',
+          room: roomName
+        })
+      }
+      console.log('Sending subscribe:', subscribeMsg)
+      ws.value?.send(JSON.stringify(subscribeMsg))
     }
 
     ws.value.onmessage = (event) => {
+      console.log('Raw message:', event.data) // Debug
+
       try {
         const data = JSON.parse(event.data)
-        if (data.type === 'confirm_subscription') return
-        if (data.message && isValidMessage(data.message)) {
-          messages.value.push(data.message)
+
+        // Handle ping messages
+        if (data.type === 'ping') return
+
+        // Handle subscription confirmation
+        if (data.type === 'confirm_subscription') {
+          console.log('Subscription confirmed')
+          return
+        }
+
+        // Handle regular messages
+        if (data.user && data.text) {
+          messages.value.push(data)
           scrollToBottom()
         }
-      } catch (e: unknown) {
-        console.error('Error parsing WebSocket message:', e)
+      } catch (e) {
+        console.error('Error parsing message:', e)
       }
-    }
-
-    ws.value.onerror = (err) => {
-      error.value = 'WebSocket connection error'
-      if (err instanceof Error) {
-        console.error(err.message)
-      }
-    }
-
-    ws.value.onclose = () => {
-      ws.value = null
     }
   }
 
