@@ -19,7 +19,7 @@
 
   onMounted(() => {
     fetchRooms()
-    roomRefreshInterval = window.setInterval(fetchRooms, 1000)
+    roomRefreshInterval = window.setInterval(fetchRooms, 3000)
   })
 
   onUnmounted(() => {
