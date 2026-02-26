@@ -87,10 +87,12 @@ async function createRoom() {
 function joinRoom() {
   if (!username.value.trim()) {
     error.value = 'Please enter your name before joining a room'
+    console.error('No username')
     return
   }
   if (!selectedRoom.value) {
     error.value = 'Please select a room'
+    console.error('❌ No room selected')
     return
   }
 
@@ -131,17 +133,35 @@ function connectWebSocket(roomName: string) {
   ws.value.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data)
-      if (data.type === 'confirm_subscription') return
+
+      if (data.type === 'confirm_subscription') {
+        return
+      }
+
+      if (data.type === 'ping' || data.type === 'welcome') {
+        return
+      }
+
+      if (isValidMessage(data)) {
+        messages.value.push(data)
+        scrollToBottom()
+        return
+      }
+
       if (data.message && isValidMessage(data.message)) {
         messages.value.push(data.message)
         scrollToBottom()
+        return
       }
+
+      console.warn('Unknown message format:', data)
     } catch (e: unknown) {
       console.error('Error parsing WebSocket message:', e)
     }
   }
 
   ws.value.onerror = (err) => {
+    console.error('WebSocket error:', err)
     error.value = 'WebSocket connection error'
     if (err instanceof Error) {
       console.error(err.message)
@@ -161,7 +181,10 @@ function disconnectWebSocket() {
 }
 
 function sendMessage() {
-  if (!newMessage.value.trim() || !currentRoom.value || !ws.value) return
+  if (!newMessage.value.trim() || !currentRoom.value || !ws.value) {
+    console.error('❌ Cannot send: missing data')
+    return
+  }
 
   const messageData = {
     user: username.value,

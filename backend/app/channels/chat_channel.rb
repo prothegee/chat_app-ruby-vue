@@ -1,9 +1,14 @@
 require "fileutils"
 
-# note:
-# - https://guides.rubyonrails.org/action_cable_overview.html
-#
-# app/channels/chat_channel.rb
+# NOTE:
+# - check:
+#   - config/cable.yml
+#   - config/database.yml
+# ---
+# wether we gonna use database on that or not, it could break some change
+# ---
+# ps:
+# `ruby on rails need to be start with simple minimalist setup/init` @prothegee
 class ChatChannel < ApplicationCable::Channel
   def subscribed
     room_name = params[:room]
@@ -11,21 +16,46 @@ class ChatChannel < ApplicationCable::Channel
 
     stream_from "chat_#{room_name}"
     @room_name = room_name
+    Rails.logger.info "Subscribed to chat_#{@room_name}"
   end
 
   def unsubscribed
-    # nothing todo for now
+    Rails.logger.info "Unsubscribed"
   end
 
+  # ActionCable calls this when NO action specified
+  def receive(data)
+    Rails.logger.info "receive() called with: #{data.inspect}"
+    handle_message(data)
+  end
+
+  # ActionCable calls this when action: "send_message" is specified
   def send_message(data)
-    user = data["user"]&.strip.presence || "Anonymous"
-    text = data["text"]&.strip
+    Rails.logger.info "send_message() called with: #{data.inspect}"
+    handle_message(data)
+  end
 
-    return if text.blank?
+  private
 
-    # ensure there's no empty data
-    unless user.present? && text.present?
-      Rails.logger.warn "Discarding invalid message: #{data.inspect}"
+  def handle_message(data)
+    # handle nested JSON string (frontend kirim data sebagai JSON string)
+    # error on instance apprunner & ec2 (vm-liked); for some reason localdev survive, but instances are not
+    message_data = if data.is_a?(String)
+      JSON.parse(data)
+    elsif data.is_a?(Hash)
+      data
+    else
+      Rails.logger.warn "Unknown data format: #{data.class}"
+      return
+    end
+
+    Rails.logger.info "Parsed  #{message_data.inspect}"
+
+    user = message_data["user"]&.strip.presence || "Anonymous"
+    text = message_data["text"]&.strip
+
+    if text.blank?
+      Rails.logger.warn "Discarding empty message: #{message_data.inspect}"
       return
     end
 
@@ -35,19 +65,16 @@ class ChatChannel < ApplicationCable::Channel
       "timestamp" => Time.now.utc.iso8601
     }
 
-    # note:
-    # - not using db
+    Rails.logger.info "message: #{message.inspect}"
     save_to_file(message)
+
+    Rails.logger.info "broadcasting to chat_#{@room_name}"
     ActionCable.server.broadcast("chat_#{@room_name}", message)
   end
 
-  private
-
-  # temporal solution to store chat data
   def save_to_file(message)
     data_file = Rails.root.join("tmp", "chat_data.json")
 
-    # load existing data
     if File.exist?(data_file) && File.size?(data_file)
       content = File.read(data_file)
       data = JSON.parse(content)
@@ -55,15 +82,13 @@ class ChatChannel < ApplicationCable::Channel
       data = { "rooms" => {} }
     end
 
-    # ensure room exists
     data["rooms"][@room_name] ||= { "messages" => [] }
     data["rooms"][@room_name]["messages"] ||= []
-
-    # add message
     data["rooms"][@room_name]["messages"] << message
 
-    # save
     FileUtils.mkdir_p(File.dirname(data_file))
     File.write(data_file, JSON.pretty_generate(data))
+
+    Rails.logger.info "Saved to #{data_file}"
   end
 end
