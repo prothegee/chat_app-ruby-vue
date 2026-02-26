@@ -6,6 +6,8 @@ Rails.application.configure do
     /http:\/\/localhost:\d+/,
     /wss:\/\/.*\.awsapprunner\.com/,
     /ws:\/\/.*\.awsapprunner\.com/,
+    /wss:\/\/.*\.prothegee\.com/,
+    /ws:\/\/.*\.prothegee\.com/,
     /ws:\/\/localhost:\d+/
   ]
 
