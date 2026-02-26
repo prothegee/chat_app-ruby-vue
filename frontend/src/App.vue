@@ -1,220 +1,215 @@
 <script setup lang="ts">
-  import { ref, onMounted, onUnmounted, watch, computed, type Ref } from 'vue'
+import { ref, onMounted, onUnmounted, watch, computed, type Ref } from 'vue'
 
-  const rooms = ref<string[]>([])
-  const newRoomName = ref('')
-  const selectedRoom = ref('')
-  const currentRoom = ref('')
-  const messages = ref<Array<{ user: string; text: string; timestamp: string | number }>>([])
-  const newMessage = ref('')
-  const username = ref('')
-  const error = ref('')
-  const ws: Ref<WebSocket|null> = ref(null)
-  const isJoined = ref(false)
+const rooms = ref<string[]>([])
+const newRoomName = ref('')
+const selectedRoom = ref('')
+const currentRoom = ref('')
+const messages = ref<Array<{ user: string; text: string; timestamp: string | number }>>([])
+const newMessage = ref('')
+const username = ref('')
+const error = ref('')
+const ws: Ref<WebSocket | null> = ref(null)
+const isJoined = ref(false)
 
-  const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:10000'
-  const WS_BASE = import.meta.env.VITE_WS_BASE || 'ws://localhost:10000/cable'
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:10000'
+const WS_BASE = import.meta.env.VITE_WS_BASE || 'ws://localhost:10000/cable'
 
-  let roomRefreshInterval: number|null = null
+let roomRefreshInterval: number | null = null
 
-  onMounted(() => {
-    fetchRooms()
-    roomRefreshInterval = window.setInterval(fetchRooms, 3000)
-  })
+onMounted(() => {
+  fetchRooms()
+  roomRefreshInterval = window.setInterval(fetchRooms, 3000)
+})
 
-  onUnmounted(() => {
+onUnmounted(() => {
+  disconnectWebSocket()
+  if (roomRefreshInterval) {
+    clearInterval(roomRefreshInterval)
+  }
+})
+
+watch(currentRoom, (newRoom) => {
+  if (newRoom) {
+    connectWebSocket(newRoom)
+  } else {
     disconnectWebSocket()
-    if (roomRefreshInterval) {
-      clearInterval(roomRefreshInterval)
-    }
-  })
+    isJoined.value = false
+  }
+})
 
-  watch(currentRoom, (newRoom) => {
-    if (newRoom) {
-      connectWebSocket(newRoom)
+watch(error, (newError) => {
+  if (newError) {
+    const timer = setTimeout(() => {
+      error.value = ''
+    }, 5000)
+
+    onUnmounted(() => clearTimeout(timer))
+  }
+})
+
+async function fetchRooms() {
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/chat`)
+    rooms.value = await res.json()
+  } catch (err: unknown) {
+    error.value = 'Failed to load rooms'
+
+    if (err instanceof Error) {
+      console.error(err.message)
+    }
+  }
+}
+
+async function createRoom() {
+  if (!newRoomName.value.trim()) return
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newRoomName.value }),
+    })
+    if (res.ok) {
+      // alert('Room created!')
+      newRoomName.value = ''
     } else {
-      disconnectWebSocket()
-      isJoined.value = false
+      const err = await res.json()
+      error.value = err.error || 'Failed to create room'
     }
-  })
-
-  watch(error, (newError) => {
-    if (newError) {
-      const timer = setTimeout(() => {
-        error.value = ''
-      }, 5000)
-
-      onUnmounted(() => clearTimeout(timer))
-    }
-  })
-
-  async function fetchRooms() {
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/chat`)
-      rooms.value = await res.json()
-    } catch (err: unknown) {
-      error.value = 'Failed to load rooms'
-
-      if (err instanceof Error) {
-        console.error(err.message)
-      }
+  } catch (err: unknown) {
+    error.value = 'Network error'
+    if (err instanceof Error) {
+      console.error(err.message)
     }
   }
+}
 
-  async function createRoom() {
-    if (!newRoomName.value.trim()) return
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newRoomName.value })
-      })
-      if (res.ok) {
-        alert('Room created!')
-        newRoomName.value = ''
-      } else {
-        const err = await res.json()
-        error.value = err.error || 'Failed to create room'
-      }
-    } catch (err: unknown) {
-      error.value = 'Network error'
-      if (err instanceof Error) {
-        console.error(err.message)
-      }
-    }
+function joinRoom() {
+  if (!username.value.trim()) {
+    error.value = 'Please enter your name before joining a room'
+    return
+  }
+  if (!selectedRoom.value) {
+    error.value = 'Please select a room'
+    return
   }
 
-  function joinRoom() {
-    if (!username.value.trim()) {
-      error.value = 'Please enter your name before joining a room'
-      return
-    }
-    if (!selectedRoom.value) {
-      error.value = 'Please select a room'
-      return
-    }
+  currentRoom.value = selectedRoom.value
+  isJoined.value = true
+  loadMessages()
+}
 
-    currentRoom.value = selectedRoom.value
-    isJoined.value = true
-    loadMessages()
-  }
-
-  async function loadMessages() {
-    if (!currentRoom.value) return
-    try {
-      const res = await fetch(`${API_BASE}/api/v1/chat/${currentRoom.value}/messages`)
-      const data = await res.json()
-      messages.value = Array.isArray(data) ? data.filter(isValidMessage) : []
-    } catch (err: unknown) {
-      error.value = 'Failed to load messages'
-      messages.value = []
-      if (err instanceof Error) {
-        console.error(err.message)
-      }
+async function loadMessages() {
+  if (!currentRoom.value) return
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/chat/${currentRoom.value}/messages`)
+    const data = await res.json()
+    messages.value = Array.isArray(data) ? data.filter(isValidMessage) : []
+  } catch (err: unknown) {
+    error.value = 'Failed to load messages'
+    messages.value = []
+    if (err instanceof Error) {
+      console.error(err.message)
     }
   }
+}
 
-  function connectWebSocket(roomName: string) {
-    disconnectWebSocket()
+function connectWebSocket(roomName: string) {
+  disconnectWebSocket()
 
-    ws.value = new WebSocket(WS_BASE)
+  ws.value = new WebSocket(WS_BASE)
 
-    ws.value.onopen = () => {
-      console.log('WebSocket connected')
-
-      // Kirim subscribe command - INI PENTING!
-      const subscribeMsg = {
+  ws.value.onopen = () => {
+    ws.value?.send(
+      JSON.stringify({
         command: 'subscribe',
-        identifier: JSON.stringify({
-          channel: 'ChatChannel',
-          room: roomName
-        })
-      }
-      console.log('Sending subscribe:', subscribeMsg)
-      ws.value?.send(JSON.stringify(subscribeMsg))
-    }
-
-    ws.value.onmessage = (event) => {
-      console.log('Raw message:', event.data) // Debug
-
-      try {
-        const data = JSON.parse(event.data)
-
-        // Handle ping messages
-        if (data.type === 'ping') return
-
-        // Handle subscription confirmation
-        if (data.type === 'confirm_subscription') {
-          console.log('Subscription confirmed')
-          return
-        }
-
-        // Handle regular messages
-        if (data.user && data.text) {
-          messages.value.push(data)
-          scrollToBottom()
-        }
-      } catch (e) {
-        console.error('Error parsing message:', e)
-      }
-    }
-  }
-
-  function disconnectWebSocket() {
-    if (ws.value) {
-      ws.value.close()
-      ws.value = null
-    }
-  }
-
-  function sendMessage() {
-    if (!newMessage.value.trim() || !currentRoom.value || !ws.value) return
-
-    const messageData = {
-      user: username.value,
-      text: newMessage.value.trim()
-    }
-
-    ws.value.send(JSON.stringify({
-      command: 'message',
-      identifier: JSON.stringify({ channel: 'ChatChannel', room: currentRoom.value }),
-      data: JSON.stringify({ action: 'send_message', ...messageData })
-    }))
-
-    newMessage.value = ''
-  }
-
-  function scrollToBottom() {
-    setTimeout(() => {
-      const container = document.querySelector('.chat-messages')
-      if (container) {
-        container.scrollTop = container.scrollHeight
-      }
-    }, 50)
-  }
-
-  function isValidMessage(msg: unknown): msg is { user: string; text: string; timestamp: string | number } {
-    return (
-      msg !== null &&
-      typeof msg === 'object' &&
-      'user' in msg &&
-      'text' in msg &&
-      'timestamp' in msg &&
-      typeof (msg as { user: unknown }).user === 'string' &&
-      typeof (msg as { text: unknown }).text === 'string' &&
-      (msg as { timestamp: unknown }).timestamp !== undefined
+        identifier: JSON.stringify({ channel: 'ChatChannel', room: roomName }),
+      }),
     )
   }
 
-  const isOwnMessage = computed(() => (msg: { user: string }) => msg?.user === username.value)
-
-  function formatTimestamp(ts: string|number|undefined) {
-    if (!ts) return '—'
-    const d = new Date(ts)
-    return isNaN(d.getTime())
-      ? '—'
-      : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  ws.value.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'confirm_subscription') return
+      if (data.message && isValidMessage(data.message)) {
+        messages.value.push(data.message)
+        scrollToBottom()
+      }
+    } catch (e: unknown) {
+      console.error('Error parsing WebSocket message:', e)
+    }
   }
+
+  ws.value.onerror = (err) => {
+    error.value = 'WebSocket connection error'
+    if (err instanceof Error) {
+      console.error(err.message)
+    }
+  }
+
+  ws.value.onclose = () => {
+    ws.value = null
+  }
+}
+
+function disconnectWebSocket() {
+  if (ws.value) {
+    ws.value.close()
+    ws.value = null
+  }
+}
+
+function sendMessage() {
+  if (!newMessage.value.trim() || !currentRoom.value || !ws.value) return
+
+  const messageData = {
+    user: username.value,
+    text: newMessage.value.trim(),
+  }
+
+  ws.value.send(
+    JSON.stringify({
+      command: 'message',
+      identifier: JSON.stringify({ channel: 'ChatChannel', room: currentRoom.value }),
+      data: JSON.stringify({ action: 'send_message', ...messageData }),
+    }),
+  )
+
+  newMessage.value = ''
+}
+
+function scrollToBottom() {
+  setTimeout(() => {
+    const container = document.querySelector('.chat-messages')
+    if (container) {
+      container.scrollTop = container.scrollHeight
+    }
+  }, 50)
+}
+
+function isValidMessage(
+  msg: unknown,
+): msg is { user: string; text: string; timestamp: string | number } {
+  return (
+    msg !== null &&
+    typeof msg === 'object' &&
+    'user' in msg &&
+    'text' in msg &&
+    'timestamp' in msg &&
+    typeof (msg as { user: unknown }).user === 'string' &&
+    typeof (msg as { text: unknown }).text === 'string' &&
+    (msg as { timestamp: unknown }).timestamp !== undefined
+  )
+}
+
+const isOwnMessage = computed(() => (msg: { user: string }) => msg?.user === username.value)
+
+function formatTimestamp(ts: string | number | undefined) {
+  if (!ts) return '—'
+  const d = new Date(ts)
+  return isNaN(d.getTime()) ? '—' : d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+}
 </script>
 
 <template>
@@ -223,11 +218,7 @@
 
     <!-- Username Input -->
     <div v-if="!isJoined" class="username-section">
-      <input
-        v-model="username"
-        placeholder="Enter your name"
-        class="username-input"
-      />
+      <input v-model="username" placeholder="Enter your name" class="username-input" />
     </div>
 
     <!-- Create Room -->
@@ -249,7 +240,15 @@
     <div v-else class="chat-container">
       <div class="chat-header">
         <h2>Room: {{ currentRoom }}</h2>
-        <button @click="() => { currentRoom = ''; username = '' }" class="btn btn-small">
+        <button
+          @click="
+            () => {
+              currentRoom = ''
+              username = ''
+            }
+          "
+          class="btn btn-small"
+        >
           Leave Room
         </button>
       </div>
@@ -261,7 +260,7 @@
           :class="[
             'message',
             { 'own-message': isOwnMessage(msg) },
-            { 'other-message': !isOwnMessage(msg) }
+            { 'other-message': !isOwnMessage(msg) },
           ]"
         >
           <template v-if="isValidMessage(msg)">
@@ -466,7 +465,9 @@
 
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .fade-enter-from,
