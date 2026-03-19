@@ -1,6 +1,8 @@
 #!/usr/bin/sh
 set -e;
 
+mkdir -p bin;
+
 cat > bin/rails << 'EOF'
 #!/usr/bin/env ruby
 # frozen_string_literal: true
@@ -22,3 +24,4 @@ Rake.application.run
 EOF
 
 chmod +x bin/rake;
+
