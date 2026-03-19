@@ -3,7 +3,8 @@
 Full-Stack Real-Time Chat Application (Rails + Vue)
 
 preview:
-![preview](./docs/vid/preview.gif)
+
+![preview](docs/vid/preview.webp)
 
 Context:
 
